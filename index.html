@@ -46,8 +46,8 @@
   .addsec-bar{padding:12px 26px;border-bottom:1px solid var(--paper-line);background:transparent;display:flex;align-items:center;gap:16px}
   .brand-logo-img{height:28px;width:auto;border-radius:6px;display:block}
   .brand-logo-text{font-size:15px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--ink)}
-  .addsec{font-family:var(--sans);font-size:12px;font-weight:500;color:#fff;background:#23242b;border:none;border-radius:999px;padding:9px 16px;cursor:pointer}
-  .addsec:hover{background:#3a3c47}
+  .addsec{font-family:var(--sans);font-size:12px;font-weight:500;color:var(--ink);background:var(--paper);border:none;border-radius:999px;height:28px;padding:0 14px;display:inline-flex;align-items:center;cursor:pointer}
+  .addsec:hover{background:#e6e4df}
 
   .wrapz{padding:18px 26px 44px}
   .sec{border-radius:16px;overflow:hidden;margin-bottom:16px}
@@ -82,9 +82,12 @@
 
   .cards{display:flex;flex-direction:column;gap:11px;min-height:40px}
   .card{background:#fbfaf8;border:1px solid var(--edge);border-radius:14px;border-left:3px solid #9aa0a8;position:relative;padding:10px 12px 11px}
+  .card.important{border-width:1.5px;border-left-width:3px}
   .card.card-dragging{opacity:.4}
   .card-top{display:flex;align-items:center;gap:8px;margin-bottom:7px}
   .card-body{padding:0}
+  .imp{margin-left:auto;color:#d09527;font-size:16px;font-weight:700;line-height:1;cursor:pointer;padding:0 1px;user-select:none}
+  .imp ~ .card-del{margin-left:0}
   .card-grip{cursor:grab;font-size:12px;line-height:1;user-select:none;padding:2px 1px}
   .card-grip:active{cursor:grabbing}
   .brand-tag{font-size:10.5px;letter-spacing:.02em;font-weight:600;padding:4px 9px;border-radius:8px;line-height:1;font-family:var(--sans)}
@@ -405,10 +408,14 @@
     }
     const titleHtml=card.title?linkify(card.title):PH_TITLE;
     const notesHtml=card.notes?linkify(card.notes):PH_NOTES;
-    return `<div class="card" data-card="${card.id}" draggable="false" style="border-left-color:${st.c}">
+    const imp=!!card.important;
+    const impMark = imp && mode!=='all' ? `<span class="imp" data-imp="${card.id}" title="Important — click to unflag">!</span>` : '';
+    const borderStyle = imp ? `border-color:${st.c}` : `border-left-color:${st.c}`;
+    return `<div class="card${imp?' important':''}" data-card="${card.id}" draggable="false" style="${borderStyle}">
       <div class="card-top">
         ${left}
         <button class="status-pick" data-statuspick="${card.id}" style="color:${st.pt};background:${st.pb}">${st.label}</button>
+        ${impMark}
         <span class="card-del" data-carddel="${card.id}" title="Delete" style="color:${st.g}">×</span>
       </div>
       <div class="card-body">
@@ -497,9 +504,19 @@
       const fc=findCard(el.dataset.carddel);if(!fc)return;
       fc.col.cards=fc.col.cards.filter(x=>x.id!==el.dataset.carddel);save();render();
     });
+    root.querySelectorAll('[data-imp]').forEach(el=>el.onclick=e=>{
+      e.stopPropagation();
+      const fc=findCard(el.dataset.imp);if(!fc)return;
+      fc.card.important=false;save();render();
+    });
 
     if(mode==='brand'){
       root.querySelectorAll('.card').forEach(makeCardDraggable);
+      root.querySelectorAll('.card').forEach(cardEl=>cardEl.addEventListener('dblclick',e=>{
+        if(e.target.closest('.fview,.fedit,a,button,.card-del,.imp,.card-grip,.status-pick,.brand-tag')) return;
+        const fc=findCard(cardEl.dataset.card);if(!fc)return;
+        fc.card.important=!fc.card.important;save();render();
+      }));
       root.querySelectorAll('.cards').forEach(cont=>{
         cont.addEventListener('dragover',e=>{ if(!cardDragId)return; e.preventDefault(); showCardPlaceholder(cont,e.clientY); });
         cont.addEventListener('drop',e=>{ if(!cardDragId)return; e.preventDefault(); dropCard(cont,e.clientY); });
